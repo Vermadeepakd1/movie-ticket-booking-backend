@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const pool = require('./db');
 const cron = require('node-cron');
+const rateLimit = require('express-rate-limit');
 require('dotenv').config(); // This loads the variables from .env
 
 const app = express();
@@ -11,11 +12,24 @@ const app = express();
 app.use(cors());
 app.use(express.json()); // To parse JSON request bodies
 
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per `windowMs`
+    message: {
+        message: 'Too many requests from this IP, please try again after 15 minutes'
+    },
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+
 const PORT = process.env.PORT || 5000;
 
 app.get('/', (req, res) => {
     res.send('Movie Ticket Booking API is running!');
 });
+
+app.use('/api', apiLimiter);
 
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/movies', require('./routes/movies'));
